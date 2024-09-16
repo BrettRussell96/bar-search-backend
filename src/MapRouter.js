@@ -6,7 +6,7 @@ require("dotenv").config();
 
 // Route to get map data based on location details
 router.get("/", async (request, response) => {
-    const { location } = request.query;
+    const { location, sort = 'distance' } = request.query;
     const apiKey = process.env.API_KEY;
 
     try {
@@ -38,11 +38,47 @@ router.get("/", async (request, response) => {
         
         const { lat, lng } = result.geometry.location;
 
+        const radius = 5000;
+        const types = ["bar", "night_club"];
+        const placesResponse = await axios.get(
+            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${types.join('|')}&key=${apiKey}`
+        );
+
+        let places = placesResponse.data.results;
+
+        if (sort === 'rating') {
+            places = places.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        } else {
+            places = places.map((place) => ({
+                ...place,
+                distance: calculateDistance(lat, lng, place.geometry.location.lat, place.geometry.location.lng)
+
+            }));
+            places = places.sort((a, b) => a.distance - b.distance);
+        };
+
+        const enrichedPlaces = places.map((place) => ({
+            name: place.name ,
+            address: place.vicinity,
+            distance: place.distance ? `${place.distance.toFixed(2)} metres` : 'N/A',
+            rating: place.rating || 'N/A',
+            website: place.website || 'N/A',
+            openingHours : place.opening_hours ? place.opening_hours.weekday_text : 'N/A',
+            images: place.photos ? place.photos.map(photo => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${apiKey}`) : [],
+            location: {
+                lat: place.geometry.location.lat,
+                lng: place.geometry.location.lng
+            }
+        }));
+
         // Return coordinate and address data as the response
         response.status(200).json({
-            lat,
-            lng,
-            address: geoData.results[0].formatted_address
+            center: {
+                lat,
+                lng,
+                address: result.formatted_address
+            },
+            places: enrichedPlaces
         });
     } catch (error) {
         console.error("Error fetching map data:", error);
