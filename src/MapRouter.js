@@ -22,8 +22,21 @@ router.get("/", async (request, response) => {
                 message: "Location not found."
             });
         };
-        // assign coordinate values to variables
-        const { lat, lng } = geoData.results[0].geometry.location;
+
+        const result = geoData.results[0];
+
+        // Check that the location is within AUS
+        const isWithinAus = result.address_components.some(component => 
+            component.short_name === 'AU' || component.long_name === 'Australia'
+        );
+
+        if (!isWithinAus) {
+            return response.status(400).json({
+                message: "Location is not within Australia."
+            });
+        };
+        
+        const { lat, lng } = result.geometry.location;
 
         // Return coordinate and address data as the response
         response.status(200).json({
@@ -36,6 +49,33 @@ router.get("/", async (request, response) => {
         response.status(500).send("Server error");
     }
     
+});
+
+
+// Route to get autocomplete suggestions for addresses or suburbs
+router.get("/autocomplete", async (request, response) => {
+    const input = request.query.input;
+    const apiKey = process.env.API_KEY;
+
+    if(!input) {
+        return response.status(400).json({
+            message: "Input parameter is required"
+        })
+    }
+
+    try {
+        // Use the Google Places Autocomplete API for suggestions
+        const autocompleteResponse = await axios.get(
+            `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&components=country:au&types=(regions)&key=${apiKey}`
+        );
+        const suggestions = autocompleteResponse.data.predictions;
+
+        // Send suggestions as the response
+        response.json(suggestions);
+    } catch (error) {
+        console.error("Error fetching autocomplete data:", error);
+        response.status(500).send("Server error");
+    }
 });
 
 
