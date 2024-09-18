@@ -4,6 +4,8 @@ const router = express.Router();
 require("dotenv").config();
 
 
+
+
 // Route to get map data based on location details
 router.get("/", async (request, response) => {
     const { location, sort = 'distance' } = request.query;
@@ -38,25 +40,17 @@ router.get("/", async (request, response) => {
         
         const { lat, lng } = result.geometry.location;
 
+        // Use google places API to find places in a 5km radius of the location
         const radius = 5000;
         const types = ["bar", "night_club"];
+        const keyword = "cocktail|pub|brewery";
         const placesResponse = await axios.get(
-            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${types.join('|')}&key=${apiKey}`
+            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${types.join('|')}&keyword=${keyword}&key=${apiKey}`
         );
 
         let places = placesResponse.data.results;
 
-        if (sort === 'rating') {
-            places = places.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        } else {
-            places = places.map((place) => ({
-                ...place,
-                distance: calculateDistance(lat, lng, place.geometry.location.lat, place.geometry.location.lng)
-
-            }));
-            places = places.sort((a, b) => a.distance - b.distance);
-        };
-
+        // Filter the data for places found
         const enrichedPlaces = places.map((place) => ({
             name: place.name ,
             address: place.vicinity,
@@ -71,7 +65,7 @@ router.get("/", async (request, response) => {
             }
         }));
 
-        // Return coordinate and address data as the response
+        // Return coordinate, address and places data as the response
         response.status(200).json({
             center: {
                 lat,
