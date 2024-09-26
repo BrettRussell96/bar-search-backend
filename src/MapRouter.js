@@ -38,24 +38,13 @@ router.get("/", async (request, response) => {
         
         const { lat, lng } = result.geometry.location;
 
-        const radius = 5000;
+        const radius = 2000;
         const types = ["bar", "night_club"];
         const placesResponse = await axios.get(
             `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${types.join('|')}&key=${apiKey}`
         );
 
         let places = placesResponse.data.results;
-
-        if (sort === 'rating') {
-            places = places.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        } else {
-            places = places.map((place) => ({
-                ...place,
-                distance: calculateDistance(lat, lng, place.geometry.location.lat, place.geometry.location.lng)
-
-            }));
-            places = places.sort((a, b) => a.distance - b.distance);
-        };
 
         const enrichedPlaces = places.map((place) => ({
             name: place.name ,
