@@ -40,8 +40,9 @@ router.get("/", async (request, response) => {
 
         const radius = 2000;
         const types = ["bar", "night_club"];
+        const keyword = "cocktail|pub|brewery";
         const placesResponse = await axios.get(
-            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${types.join('|')}&key=${apiKey}`
+            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${types.join('|')}&keyword=${keyword}&key=${apiKey}`
         );
 
         let places = placesResponse.data.results;
