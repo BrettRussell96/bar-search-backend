@@ -47,17 +47,26 @@ router.get("/", async (request, response) => {
 
         let places = placesResponse.data.results;
 
-        const enrichedPlaces = places.map((place) => ({
-            name: place.name ,
-            address: place.vicinity,
-            distance: place.distance ? `${place.distance.toFixed(2)} metres` : 'N/A',
-            rating: place.rating || 'N/A',
-            website: place.website || 'N/A',
-            openingHours : place.opening_hours ? place.opening_hours.weekday_text : 'N/A',
-            images: place.photos ? place.photos.map(photo => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${apiKey}`) : [],
-            location: {
-                lat: place.geometry.location.lat,
-                lng: place.geometry.location.lng
+        const enrichedPlaces = await Promise.all(places.map(async (place) => {
+            const placeDetailsResponse = await axios.get(
+                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=photos&key=${apiKey}`
+            );
+            const placeDetails = placeDetailsResponse.data.result;
+
+            return {
+                name: place.name ,
+                address: place.vicinity,
+                distance: place.distance ? `${place.distance.toFixed(2)} metres` : 'N/A',
+                rating: place.rating || 'N/A',
+                website: place.website || 'N/A',
+                openingHours : place.opening_hours ? place.opening_hours.weekday_text : 'N/A',
+                images: placeDetails.photos ? placeDetails.photos.map(photo => 
+                    `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${apiKey}`
+                ) : [],
+                location: {
+                    lat: place.geometry.location.lat,
+                    lng: place.geometry.location.lng
+                }
             }
         }));
 
